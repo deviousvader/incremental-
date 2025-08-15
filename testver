@@ -131,8 +131,7 @@
         { name: "Farm", type: "cps", amount: 5, cost: 50, owned: 0 },
         { name: "Mine", type: "cps", amount: 20, cost: 200, owned: 0 },
         { name: "Pickaxe", type: "cpc", amount: 1, cost: 15, owned: 0 },
-        { name: "Drill", type: "cpc", amount: 5, cost: 75, owned: 0 },
-      {name: "Factory", type: coinsPerClick, amount: 10, cost: 225, owned: 0} }
+        { name: "Drill", type: "cpc", amount: 5, cost: 75, owned: 0 }
     ];
 
     function clickCoin() {
@@ -250,3 +249,4 @@
 
 </body>
 </html>
+
