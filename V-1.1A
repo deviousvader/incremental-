@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Incremental Game with Save</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background: #f0f0f0;
+        margin: 0;
+        padding: 20px;
+    }
+    h1 {
+        margin-bottom: 10px;
+    }
+    button {
+        padding: 10px 20px;
+        margin: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        border: none;
+        border-radius: 6px;
+        background: #4caf50;
+        color: white;
+    }
+    button:disabled {
+        background: #aaa;
+        cursor: not-allowed;
+    }
+    #stats {
+        margin: 15px 0;
+        font-size: 18px;
+    }
+    .upgrade {
+        background: #2196f3;
+    }
+</style>
+</head>
+<body>
+
+<h1>Clicker Game</h1>
+<div id="stats">
+    Coins: <span id="coins">0</span><br>
+    Coins per click: <span id="cpc">1</span><br>
+    Coins per second: <span id="cps">0</span>
+</div>
+
+<button onclick="clickCoin()">Click for Coins (+1)</button><br>
+
+<div id="upgrades"></div>
+<br>
+<button onclick="resetGame()" style="background:#e53935">Reset Game</button>
+
+<script>
+    let coins = 0;
+    let coinsPerClick = 1;
+    let coinsPerSecond = 0;
+
+    let upgrades = [
+        { name: "Cursor", type: "cps", amount: 1, cost: 10 },
+        { name: "Farm", type: "cps", amount: 5, cost: 50 },
+        { name: "Mine", type: "cps", amount: 20, cost: 200 },
+        { name: "Pickaxe", type: "cpc", amount: 1, cost: 15 },
+        { name: "Drill", type: "cpc", amount: 5, cost: 75 }
+    ];
+
+    // Click for coins
+    function clickCoin() {
+        coins += coinsPerClick;
+        updateDisplay();
+        saveGame();
+    }
+
+    // Buy upgrade
+    function buyUpgrade(index) {
+        let u = upgrades[index];
+        if (coins >= u.cost) {
+            coins -= u.cost;
+            if (u.type === "cps") coinsPerSecond += u.amount;
+            if (u.type === "cpc") coinsPerClick += u.amount;
+            u.cost = Math.floor(u.cost * 1.5);
+            updateDisplay();
+            renderUpgrades();
+            saveGame();
+        }
+    }
+
+    // Update UI
+    function updateDisplay() {
+        document.getElementById("coins").textContent = coins;
+        document.getElementById("cpc").textContent = coinsPerClick;
+        document.getElementById("cps").textContent = coinsPerSecond;
+        document.querySelectorAll(".upgrade-btn").forEach((btn, i) => {
+            btn.disabled = coins < upgrades[i].cost;
+        });
+    }
+
+    // Render upgrades
+    function renderUpgrades() {
+        let container = document.getElementById("upgrades");
+        container.innerHTML = "";
+        upgrades.forEach((u, i) => {
+            let btn = document.createElement("button");
+            btn.className = "upgrade-btn upgrade";
+            btn.textContent = `${u.name} (+${u.amount} ${u.type.toUpperCase()}) - Cost: ${u.cost} coins`;
+            btn.onclick = () => buyUpgrade(i);
+            container.appendChild(btn);
+            container.appendChild(document.createElement("br"));
+        });
+    }
+
+    // Passive income
+    setInterval(() => {
+        coins += coinsPerSecond;
+        updateDisplay();
+        saveGame();
+    }, 1000);
+
+    // Save game
+    function saveGame() {
+        const saveData = {
+            coins,
+            coinsPerClick,
+            coinsPerSecond,
+            upgrades
+        };
+        localStorage.setItem("incrementalSave", JSON.stringify(saveData));
+    }
+
+    // Load game
+    function loadGame() {
+        const saved = localStorage.getItem("incrementalSave");
+        if (saved) {
+            const data = JSON.parse(saved);
+            coins = data.coins || 0;
+            coinsPerClick = data.coinsPerClick || 1;
+            coinsPerSecond = data.coinsPerSecond || 0;
+            upgrades = data.upgrades || upgrades;
+        }
+    }
+
+    // Reset game
+    function resetGame() {
+        if (confirm("Are you sure you want to reset your game?")) {
+            localStorage.removeItem("incrementalSave");
+            coins = 0;
+            coinsPerClick = 1;
+            coinsPerSecond = 0;
+            upgrades = [
+                { name: "Cursor", type: "cps", amount: 1, cost: 10 },
+                { name: "Farm", type: "cps", amount: 5, cost: 50 },
+                { name: "Mine", type: "cps", amount: 20, cost: 200 },
+                { name: "Pickaxe", type: "cpc", amount: 1, cost: 15 },
+                { name: "Drill", type: "cpc", amount: 5, cost: 75 }
+            ];
+            renderUpgrades();
+            updateDisplay();
+            saveGame();
+        }
+    }
+
+    // Start game
+    loadGame();
+    renderUpgrades();
+    updateDisplay();
+</script>
+
+</body>
+</html>
