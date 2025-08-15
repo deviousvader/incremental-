@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Basic Incremental Game</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background: #f0f0f0;
+        margin: 0;
+        padding: 20px;
+    }
+    h1 {
+        margin-bottom: 10px;
+    }
+    button {
+        padding: 10px 20px;
+        margin: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        border: none;
+        border-radius: 6px;
+        background: #4caf50;
+        color: white;
+    }
+    button:disabled {
+        background: #aaa;
+    }
+    #stats {
+        margin: 15px 0;
+        font-size: 18px;
+    }
+</style>
+</head>
+<body>
+
+<h1>Clicker Game</h1>
+<div id="stats">
+    Coins: <span id="coins">0</span><br>
+    Coins per second: <span id="cps">0</span>
+</div>
+
+<button onclick="clickCoin()">Click for Coins (+1)</button><br>
+<button onclick="buyUpgrade()" id="upgradeBtn">Buy Upgrade (Cost: 10 coins)</button>
+
+<script>
+    let coins = 0;
+    let coinsPerClick = 1;
+    let coinsPerSecond = 0;
+    let upgradeCost = 10;
+
+    function clickCoin() {
+        coins += coinsPerClick;
+        updateDisplay();
+    }
+
+    function buyUpgrade() {
+        if (coins >= upgradeCost) {
+            coins -= upgradeCost;
+            coinsPerSecond += 1;
+            upgradeCost = Math.floor(upgradeCost * 1.5);
+            document.getElementById("upgradeBtn").textContent = `Buy Upgrade (Cost: ${upgradeCost} coins)`;
+            updateDisplay();
+        }
+    }
+
+    function updateDisplay() {
+        document.getElementById("coins").textContent = coins;
+        document.getElementById("cps").textContent = coinsPerSecond;
+        document.getElementById("upgradeBtn").disabled = coins < upgradeCost;
+    }
+
+    // Passive income
+    setInterval(() => {
+        coins += coinsPerSecond;
+        updateDisplay();
+    }, 1000);
+
+    updateDisplay();
+</script>
+
+</body>
+</html>
