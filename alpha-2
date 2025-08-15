@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Coin Clicker</title>
+<style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        margin: 0;
+        background: linear-gradient(to bottom, #f9d976, #f39f86);
+        color: #333;
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* Main layout */
+    #game {
+        display: flex;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Left side: main click area */
+    #main {
+        flex: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    /* Big clickable coin */
+    #coinButton {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #ffdf85, #d4a12f);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: transform 0.1s ease;
+    }
+    #coinButton:hover {
+        transform: scale(1.05);
+    }
+    #coinButton:active {
+        transform: scale(0.95);
+    }
+
+    /* Stats */
+    #stats {
+        margin-top: 20px;
+        font-size: 18px;
+        text-align: center;
+    }
+
+    /* Right side: upgrades */
+    #sidebar {
+        flex: 1;
+        background: rgba(255,255,255,0.85);
+        padding: 20px;
+        overflow-y: auto;
+        box-shadow: -3px 0 10px rgba(0,0,0,0.2);
+    }
+    #sidebar h2 {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    .upgrade-btn {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.1s ease;
+    }
+    .upgrade-btn:hover {
+        background: #45a049;
+        transform: scale(1.02);
+    }
+    .upgrade-btn:disabled {
+        background: #aaa;
+        cursor: not-allowed;
+    }
+
+    /* Offline popup */
+    #offlinePopup {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #ffd700;
+        color: #333;
+        padding: 15px 25px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        font-size: 18px;
+        font-weight: bold;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    #offlinePopup.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+</style>
+</head>
+<body>
+
+<div id="game">
+    <div id="main">
+        <div id="coinButton" onclick="clickCoin()">💰</div>
+        <div id="stats">
+            <div>Coins: <span id="coins">0</span></div>
+            <div>Coins per click: <span id="cpc">1</span></div>
+            <div>Coins per second: <span id="cps">0</span></div>
+        </div>
+    </div>
+    <div id="sidebar">
+        <h2>Upgrades</h2>
+        <div id="upgrades"></div>
+        <button onclick="resetGame()" style="background:#e53935">Reset Game</button>
+    </div>
+</div>
+
+<div id="offlinePopup"></div>
+
+<script>
+    let coins = 0;
+    let coinsPerClick = 1;
+    let coinsPerSecond = 0;
+
+    let upgrades = [
+        { name: "Cursor", type: "cps", amount: 1, cost: 10, owned: 0 },
+        { name: "Farm", type: "cps", amount: 5, cost: 50, owned: 0 },
+        { name: "Mine", type: "cps", amount: 20, cost: 200, owned: 0 },
+        { name: "Pickaxe", type: "cpc", amount: 1, cost: 15, owned: 0 },
+        { name: "Drill", type: "cpc", amount: 5, cost: 75, owned: 0 }
+    ];
+
+    function clickCoin() {
+        coins += coinsPerClick;
+        updateDisplay();
+        saveGame();
+    }
+
+    function buyUpgrade(index) {
+        let u = upgrades[index];
+        if (coins >= u.cost) {
+            coins -= u.cost;
+            if (u.type === "cps") coinsPerSecond += u.amount;
+            if (u.type === "cpc") coinsPerClick += u.amount;
+            u.owned++;
+            u.cost = Math.floor(u.cost * 1.5);
+            updateDisplay();
+            renderUpgrades();
+            saveGame();
+        }
+    }
+
+    function updateDisplay() {
+        document.getElementById("coins").textContent = coins;
+        document.getElementById("cpc").textContent = coinsPerClick;
+        document.getElementById("cps").textContent = coinsPerSecond;
+        document.querySelectorAll(".upgrade-btn").forEach((btn, i) => {
+            btn.disabled = coins < upgrades[i].cost;
+        });
+    }
+
+    function renderUpgrades() {
+        let container = document.getElementById("upgrades");
+        container.innerHTML = "";
+        upgrades.forEach((u, i) => {
+            let btn = document.createElement("button");
+            btn.className = "upgrade-btn";
+            btn.textContent = `${u.name} (+${u.amount} ${u.type.toUpperCase()}) - ${u.cost} coins | Owned: ${u.owned}`;
+            btn.onclick = () => buyUpgrade(i);
+            container.appendChild(btn);
+        });
+    }
+
+    setInterval(() => {
+        coins += coinsPerSecond;
+        updateDisplay();
+        saveGame();
+    }, 1000);
+
+    function saveGame() {
+        const saveData = {
+            coins,
+            coinsPerClick,
+            coinsPerSecond,
+            upgrades,
+            lastSave: Date.now()
+        };
+        localStorage.setItem("incrementalSave", JSON.stringify(saveData));
+    }
+
+    function showOfflinePopup(text) {
+        const popup = document.getElementById("offlinePopup");
+        popup.textContent = text;
+        popup.classList.add("show");
+        setTimeout(() => {
+            popup.classList.remove("show");
+        }, 4000);
+    }
+
+    function loadGame() {
+        const saved = localStorage.getItem("incrementalSave");
+        if (saved) {
+            const data = JSON.parse(saved);
+            coins = data.coins || 0;
+            coinsPerClick = data.coinsPerClick || 1;
+            coinsPerSecond = data.coinsPerSecond || 0;
+            upgrades = data.upgrades || upgrades;
+
+            if (data.lastSave) {
+                const timeAwaySec = Math.floor((Date.now() - data.lastSave) / 1000);
+                if (timeAwaySec > 0 && coinsPerSecond > 0) {
+                    let earnings = 0;
+                    const firstHour = Math.min(timeAwaySec, 3600);
+                    const afterHour = Math.max(timeAwaySec - 3600, 0);
+
+                    earnings += firstHour * coinsPerSecond * 0.05;
+                    earnings += afterHour * coinsPerSecond * 0.005;
+
+                    coins += Math.floor(earnings);
+                    showOfflinePopup(`You were away ${timeAwaySec}s and earned ${Math.floor(earnings)} coins!`);
+                }
+            }
+        }
+    }
+
+    function resetGame() {
+        if (confirm("Are you sure you want to reset your game?")) {
+            localStorage.removeItem("incrementalSave");
+            coins = 0;
+            coinsPerClick = 1;
+            coinsPerSecond = 0;
+            upgrades = [
+                { name: "Cursor", type: "cps", amount: 1, cost: 10, owned: 0 },
+                { name: "Farm", type: "cps", amount: 5, cost: 50, owned: 0 },
+                { name: "Mine", type: "cps", amount: 20, cost: 200, owned: 0 },
+                { name: "Pickaxe", type: "cpc", amount: 1, cost: 15, owned: 0 },
+                { name: "Drill", type: "cpc", amount: 5, cost: 75, owned: 0 }
+            ];
+            renderUpgrades();
+            updateDisplay();
+            saveGame();
+        }
+    }
+
+    loadGame();
+    renderUpgrades();
+    updateDisplay();
+</script>
+
+</body>
+</html>
