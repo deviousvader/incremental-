@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Incremental Coin Clicker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(180deg, #2c3e50, #34495e);
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 { font-size: 2.5em; }
+    #coin {
+      font-size: 100px;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    #coin:active { transform: scale(0.9); }
+    .upgrade-section {
+      margin: 15px;
+      padding: 10px;
+      border-radius: 15px;
+      background: #3b4a5a;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+    .upgrade-btn, .subupgrade-btn {
+      display: block;
+      margin: 5px auto;
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      background: #1abc9c;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .upgrade-btn:disabled, .subupgrade-btn:disabled {
+      background: #7f8c8d;
+      cursor: not-allowed;
+    }
+    .upgrade-btn:hover:not(:disabled),
+    .subupgrade-btn:hover:not(:disabled) {
+      background: #16a085;
+    }
+    .golden-coin {
+      position: absolute;
+      font-size: 50px;
+      cursor: pointer;
+      animation: float 10s linear forwards;
+    }
+    @keyframes float {
+      0% { top: 100%; left: 10%; opacity: 1; }
+      100% { top: -10%; left: 80%; opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <h1>💰 Incremental Coin Clicker</h1>
+  <div id="coin">🪙</div>
+  <p id="coins">Coins: 0</p>
+  <p id="cpc">Coins per Click: 1</p>
+  <p id="cps">Coins per Second: 0</p>
+  <div id="upgrades"></div>
+  <button onclick="saveGame()">💾 Save Game</button>
+  <button onclick="loadGame()">📂 Load Game</button>
+
+  <script>
+    let coins = 0;
+    let coinsPerClick = 1;
+    let coinsPerSecond = 0;
+
+    let upgrades = [
+      { name: "Cursor", type: "cpc", amount: 1, cost: 10, owned: 0 },
+      { name: "Worker", type: "cps", amount: 5, cost: 100, owned: 0 },
+      { name: "Manager", type: "cps", amount: 50, cost: 1000, owned: 0 },
+      { name: "Bank", type: "cps", amount: 5000, cost: 250000, owned: 0 },
+      { name: "ATM", type: "cps", amount: 100, cost: 10000, owned: 0 },
+      { name: "Business", type: "cps", amount: 25000, cost: 10000000, owned: 0 },
+      { name: "Corporation", type: "cps", amount: 250000, cost: 1000000000, owned: 0 },
+      { name: "Tech Firm", type: "cps", amount: 5000000, cost: 500000000000, owned: 0 }
+    ];
+
+    upgrades.forEach(u => {
+      u.subOwned = 0;
+      u.subCost = u.cost * 25;
+    });
+
+    document.getElementById("coin").onclick = () => {
+      coins += coinsPerClick;
+      updateDisplay();
+    };
+
+    function buyUpgrade(i) {
+      let u = upgrades[i];
+      if (coins >= u.cost) {
+        coins -= u.cost;
+        u.owned++;
+        if (u.type === "cps") coinsPerSecond += u.amount;
+        if (u.type === "cpc") coinsPerClick += u.amount;
+        u.cost = Math.floor(u.cost * 1.25);
+        updateDisplay();
+        renderUpgrades();
+      }
+    }
+
+    function buySubUpgrade(i) {
+      let u = upgrades[i];
+      if (coins >= u.subCost && u.subOwned < 10) {
+        coins -= u.subCost;
+        u.subOwned++;
+        if (u.type === "cps") coinsPerSecond += u.amount * 0.5 * u.owned;
+        if (u.type === "cpc") coinsPerClick += u.amount * 0.5 * u.owned;
+        u.subCost = Math.floor(u.subCost * 2);
+        updateDisplay();
+        renderUpgrades();
+      }
+    }
+
+    function renderUpgrades() {
+      let container = document.getElementById("upgrades");
+      container.innerHTML = "";
+      upgrades.forEach((u, i) => {
+        let section = document.createElement("div");
+        section.className = "upgrade-section";
+
+        let btn = document.createElement("button");
+        btn.className = "upgrade-btn";
+        btn.disabled = coins < u.cost;
+        btn.onclick = () => buyUpgrade(i);
+        btn.innerHTML = `
+          <div>${u.name} (+${u.amount} ${u.type.toUpperCase()})</div>
+          <div>Cost: ${u.cost} coins</div>
+          <div>Owned: ${u.owned || 0}</div>
+        `;
+        section.appendChild(btn);
+
+        let subBtn = document.createElement("button");
+        subBtn.className = "subupgrade-btn";
+        subBtn.disabled = coins < u.subCost || (u.subOwned >= 10);
+        subBtn.onclick = () => buySubUpgrade(i);
+        subBtn.innerHTML = `
+          <div>🔧 ${u.name} Efficiency (+50% per building)</div>
+          <div>Cost: ${u.subCost} coins | Owned: ${u.subOwned || 0}/10</div>
+        `;
+        section.appendChild(subBtn);
+
+        container.appendChild(section);
+      });
+    }
+
+    // Golden coin spawn
+    function spawnGoldenCoin() {
+      let g = document.createElement("div");
+      g.className = "golden-coin";
+      g.style.left = Math.random() * 80 + "%";
+      g.innerHTML = "🌟";
+      document.body.appendChild(g);
+
+      g.onclick = () => {
+        let effect = Math.floor(Math.random() * 3);
+        if (effect === 0) {
+          coins += Math.floor(coins * (Math.random() * 0.15 + 0.1)); // 10–25%
+        } else if (effect === 1) {
+          coinsPerClick *= 1111;
+          setTimeout(() => { coinsPerClick /= 1111; }, 15000);
+        } else {
+          coinsPerSecond *= 7;
+          setTimeout(() => { coinsPerSecond /= 7; }, 15000);
+        }
+        g.remove();
+      };
+
+      setTimeout(() => g.remove(), 10000);
+    }
+
+    setInterval(() => { coins += coinsPerSecond; updateDisplay(); }, 1000);
+    setInterval(() => { if (Math.random() < 0.05) spawnGoldenCoin(); }, 5000);
+
+    function updateDisplay() {
+      document.getElementById("coins").textContent = "Coins: " + coins;
+      document.getElementById("cpc").textContent = "Coins per Click: " + coinsPerClick;
+      document.getElementById("cps").textContent = "Coins per Second: " + coinsPerSecond;
+    }
+
+    // Save system (no offline earnings)
+    function saveGame() {
+      let saveData = {
+        coins,
+        coinsPerClick,
+        coinsPerSecond,
+        upgrades
+      };
+      localStorage.setItem("incrementalSave", JSON.stringify(saveData));
+      alert("Game Saved!");
+    }
+
+    function loadGame() {
+      const saved = localStorage.getItem("incrementalSave");
+      if (saved) {
+        const data = JSON.parse(saved);
+        coins = data.coins || 0;
+        coinsPerClick = 1;
+        coinsPerSecond = 0;
+
+        upgrades.forEach((u, i) => {
+          if (data.upgrades && data.upgrades[i]) {
+            let savedUpgrade = data.upgrades[i];
+            u.owned = savedUpgrade.owned || 0;
+            u.cost = savedUpgrade.cost || u.cost;
+            u.subOwned = savedUpgrade.subOwned ?? 0;
+            u.subCost = savedUpgrade.subCost ?? (u.cost * 25);
+
+            // Apply upgrades
+            if (u.type === "cps") {
+              coinsPerSecond += u.amount * u.owned;
+              coinsPerSecond += u.amount * u.owned * 0.5 * u.subOwned;
+            } else if (u.type === "cpc") {
+              coinsPerClick += u.amount * u.owned;
+              coinsPerClick += u.amount * u.owned * 0.5 * u.subOwned;
+            }
+          }
+        });
+        updateDisplay();
+        renderUpgrades();
+        alert("Game Loaded!");
+      }
+    }
+
+    renderUpgrades();
+    updateDisplay();
+  </script>
+</body>
+</html>
