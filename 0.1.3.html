@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Incremental Game</title>
+<style>
+    body {
+        background: #222;
+        color: white;
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 40px;
+        padding: 20px;
+    }
+
+    #game {
+        display: flex;
+        gap: 40px;
+    }
+
+    #coin-section {
+        text-align: center;
+    }
+
+    #coin {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: gold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        cursor: pointer;
+        box-shadow: 0px 0px 20px #000;
+        transition: transform 0.1s ease-in-out;
+    }
+
+    #coin:active {
+        transform: scale(0.9);
+    }
+
+    #stats {
+        margin-top: 20px;
+        font-size: 18px;
+    }
+
+    #upgrades {
+        width: 300px;
+    }
+
+    .upgrade-section {
+        background: #333;
+        border-radius: 12px;
+        padding: 10px;
+        margin-bottom: 10px;
+        box-shadow: 0 0 10px black;
+    }
+
+    .upgrade-btn, .subupgrade-btn {
+        display: block;
+        width: 100%;
+        margin: 5px 0;
+        padding: 10px;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        transition: background 0.3s;
+    }
+
+    .upgrade-btn {
+        background: #555;
+        color: white;
+    }
+    .upgrade-btn:hover {
+        background: #666;
+    }
+
+    .subupgrade-btn {
+        background: #8844ff;
+        color: white;
+    }
+    .subupgrade-btn:hover {
+        background: #aa66ff;
+    }
+
+    #subupgrades {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 260px;
+        background: #222;
+        padding: 10px;
+        border-radius: 12px;
+        box-shadow: 0 0 15px black;
+    }
+
+    #save-controls {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+    }
+
+    #save-controls button {
+        margin: 5px;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 8px;
+        background: #555;
+        color: white;
+        cursor: pointer;
+    }
+    #save-controls button:hover {
+        background: #777;
+    }
+</style>
+</head>
+<body>
+<div id="game">
+    <div id="coin-section">
+        <div id="coin">💰</div>
+        <div id="stats">
+            <div id="coins">Coins: 0</div>
+            <div id="cpc">Coins per Click: 1</div>
+            <div id="cps">Coins per Second: 0</div>
+        </div>
+    </div>
+
+    <div id="upgrades"></div>
+</div>
+
+<div id="subupgrades">
+    <h3>Sub-Upgrades</h3>
+    <div id="subupgrades-list"></div>
+</div>
+
+<div id="save-controls">
+    <button onclick="saveGame()">💾 Save</button>
+    <button onclick="loadGame()">📂 Load</button>
+</div>
+
+<script>
+let coins = 0;
+let coinsPerClick = 1;
+let coinsPerSecond = 0;
+
+let upgrades = [
+    { name: "Cursor", type: "cpc", amount: 1, cost: 10, owned: 0, subOwned: 0, subCost: 250 },
+    { name: "Worker", type: "cps", amount: 5, cost: 100, owned: 0, subOwned: 0, subCost: 2500 },
+    { name: "Manager", type: "cps", amount: 50, cost: 5000, owned: 0, subOwned: 0, subCost: 125000 },
+    { name: "Bank", type: "cps", amount: 5000, cost: 250000, owned: 0, subOwned: 0, subCost: 6250000 },
+    { name: "ATM", type: "cps", amount: 100, cost: 10000, owned: 0, subOwned: 0, subCost: 250000 },
+    { name: "Business", type: "cps", amount: 25000, cost: 10000000, owned: 0, subOwned: 0, subCost: 250000000 },
+    { name: "Corporation", type: "cps", amount: 250000, cost: 1000000000, owned: 0, subOwned: 0, subCost: 25000000000 },
+    { name: "Tech Firm", type: "cps", amount: 5000000, cost: 500000000000, owned: 0, subOwned: 0, subCost: 12500000000000 }
+];
+
+document.getElementById("coin").addEventListener("click", () => {
+    coins += coinsPerClick;
+    updateDisplay();
+});
+
+function buyUpgrade(i) {
+    let u = upgrades[i];
+    if (coins >= u.cost) {
+        coins -= u.cost;
+        u.owned++;
+        if (u.type === "cps") {
+            coinsPerSecond += u.amount;
+        } else {
+            coinsPerClick += u.amount;
+        }
+        u.cost = Math.floor(u.cost * 1.25);
+        updateDisplay();
+        renderUpgrades();
+    }
+}
+
+function buySubUpgrade(i) {
+    let u = upgrades[i];
+    if (coins >= u.subCost) {
+        coins -= u.subCost;
+        u.subOwned++;
+        if (u.type === "cps") {
+            coinsPerSecond += u.amount * 0.5 * u.owned;
+        } else {
+            coinsPerClick += u.amount * 0.5 * u.owned;
+        }
+        u.subCost = Math.floor(u.subCost * 2.5);
+        updateDisplay();
+        renderUpgrades();
+    }
+}
+
+function renderUpgrades() {
+    let container = document.getElementById("upgrades");
+    container.innerHTML = "";
+    upgrades.forEach((u, i) => {
+        let section = document.createElement("div");
+        section.className = "upgrade-section";
+
+        let btn = document.createElement("button");
+        btn.className = "upgrade-btn";
+        btn.disabled = coins < u.cost;
+        btn.onclick = () => buyUpgrade(i);
+        btn.innerHTML = `
+            <div>${u.name} (+${u.amount} ${u.type.toUpperCase()})</div>
+            <div>Cost: ${u.cost} coins | Owned: ${u.owned}</div>
+        `;
+        section.appendChild(btn);
+
+        let subBtn = document.createElement("button");
+        subBtn.className = "subupgrade-btn";
+        subBtn.disabled = coins < u.subCost || u.owned === 0;
+        subBtn.onclick = () => buySubUpgrade(i);
+        subBtn.innerHTML = `
+            <div>🔧 ${u.name} Efficiency (+50% per building)</div>
+            <div>Cost: ${u.subCost} | Owned: ${u.subOwned}</div>
+        `;
+        section.appendChild(subBtn);
+
+        container.appendChild(section);
+    });
+}
+
+function updateDisplay() {
+    document.getElementById("coins").innerText = "Coins: " + coins;
+    document.getElementById("cpc").innerText = "Coins per Click: " + coinsPerClick;
+    document.getElementById("cps").innerText = "Coins per Second: " + coinsPerSecond;
+}
+
+function gameLoop() {
+    coins += coinsPerSecond;
+    updateDisplay();
+}
+setInterval(gameLoop, 1000);
+
+// Save/Load
+function saveGame() {
+    localStorage.setItem("incrementalSave", JSON.stringify({
+        coins, coinsPerClick, coinsPerSecond, upgrades
+    }));
+}
+
+function loadGame() {
+    const saved = localStorage.getItem("incrementalSave");
+    if (saved) {
+        const data = JSON.parse(saved);
+        coins = data.coins || 0;
+        coinsPerClick = data.coinsPerClick || 1;
+        coinsPerSecond = data.coinsPerSecond || 0;
+
+        upgrades.forEach((u, i) => {
+            if (data.upgrades && data.upgrades[i]) {
+                let savedUpgrade = data.upgrades[i];
+                u.owned = savedUpgrade.owned || 0;
+                u.cost = savedUpgrade.cost || u.cost;
+                u.subOwned = savedUpgrade.subOwned ?? 0;
+                u.subCost = savedUpgrade.subCost ?? (u.cost * 25);
+            }
+        });
+    }
+    updateDisplay();
+    renderUpgrades();
+}
+
+// Auto-save every 10s
+setInterval(saveGame, 10000);
+
+updateDisplay();
+renderUpgrades();
+</script>
+</body>
+</html>
