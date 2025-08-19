@@ -1,0 +1,37 @@
+function renderUpgrades() {
+    let container = document.getElementById("upgrades");
+    container.innerHTML = "";
+    upgrades.forEach((u, i) => {
+        let section = document.createElement("div");
+        section.className = "upgrade-section";
+
+        // Main upgrade button
+        let btn = document.createElement("button");
+        btn.className = "upgrade-btn";
+        btn.disabled = coins < u.cost;
+        btn.onclick = () => buyUpgrade(i);
+
+        let info = document.createElement("div");
+        info.className = "upgrade-info";
+        info.innerHTML = `
+            <div class="upgrade-name">${u.name} (+${u.amount} ${u.type.toUpperCase()})</div>
+            <div>Cost: ${u.cost} coins</div>
+            <div class="upgrade-owned">Owned: ${u.owned || 0}</div>
+        `;
+        btn.appendChild(info);
+        section.appendChild(btn);
+
+        // Sub-upgrade button
+        let subBtn = document.createElement("button");
+        subBtn.className = "subupgrade-btn";
+        subBtn.disabled = coins < u.subCost || (u.subOwned >= 10);
+        subBtn.onclick = () => buySubUpgrade(i);
+        subBtn.innerHTML = `
+            <div>🔧 ${u.name} Efficiency (+50% per building)</div>
+            <div>Cost: ${u.subCost} coins | Owned: ${u.subOwned || 0}/10</div>
+        `;
+        section.appendChild(subBtn);
+
+        container.appendChild(section);
+    });
+}
