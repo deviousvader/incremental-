@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Incremental Game</title>
+  <style>
+    body {
+      background: #f5deb3;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    #coin {
+      font-size: 30px;
+      padding: 20px;
+      background: gold;
+      border-radius: 50%;
+      cursor: pointer;
+      display: inline-block;
+      margin-top: 20px;
+      box-shadow: 0 0 10px #0003;
+    }
+    #store {
+      margin-top: 30px;
+    }
+    .upgrade {
+      border: 2px solid #8b5a2b;
+      background: #deb887;
+      margin: 10px auto;
+      padding: 10px;
+      width: 300px;
+      border-radius: 10px;
+    }
+    .upgrade button {
+      margin-top: 10px;
+    }
+    .subupgrade {
+      font-size: 12px;
+      margin-top: 5px;
+      color: #333;
+    }
+    .golden-coin {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: radial-gradient(circle, gold 70%, orange 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 20px gold;
+      cursor: pointer;
+      animation: fadeIn 1s, float 4s linear infinite;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.5); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes float {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <h1>Incremental Coin Game</h1>
+  <div>
+    <div id="coin">🪙</div>
+  </div>
+  <p>Coins: <span id="coins">0</span></p>
+  <p>Coins per second: <span id="cps">0</span></p>
+  <p>Coins per click: <span id="cpc">1</span></p>
+
+  <div id="store"></div>
+
+  <script>
+    let coins = 0;
+    let coinsPerClick = 1;
+    let coinsPerSecond = 0;
+    let productionMultiplier = 1;
+    let clickMultiplier = 1;
+
+    // Building upgrades
+    const upgrades = [
+      { name: "Cursor", type: "cpc", amount: 1, cost: 22, owned: 0, subCost: 500, subOwned: 0 },
+      { name: "Worker", type: "cps", amount: 5, cost: 75, owned: 0, subCost: 1875, subOwned: 0 },
+      { name: "Manager", type: "cps", amount: 20, cost: 200, owned: 0, subCost: 5000, subOwned: 0 },
+      { name: "ATM", type: "cps", amount: 100, cost: 10000, owned: 0, subCost: 250000, subOwned: 0 },
+      { name: "Bank", type: "cps", amount: 5000, cost: 250000, owned: 0, subCost: 6250000, subOwned: 0 },
+      { name: "Business", type: "cps", amount: 25000, cost: 10000000, owned: 0, subCost: 250000000, subOwned: 0 },
+      { name: "Corporation", type: "cps", amount: 250000, cost: 1000000000, owned: 0, subCost: 25000000000, subOwned: 0 },
+      { name: "Tech Firm", type: "cps", amount: 5000000, cost: 500000000000, owned: 0, subCost: 12500000000000, subOwned: 0 }
+    ];
+
+    const store = document.getElementById("store");
+    const coinDisplay = document.getElementById("coins");
+    const cpsDisplay = document.getElementById("cps");
+    const cpcDisplay = document.getElementById("cpc");
+
+    // Golden coin spawner
+    function spawnGoldenCoin() {
+      if (Math.random() < 0.2) { // 20% chance every interval
+        let goldenCoin = document.createElement("div");
+        goldenCoin.className = "golden-coin";
+        goldenCoin.style.left = Math.random() * (window.innerWidth - 50) + "px";
+        goldenCoin.style.top = Math.random() * (window.innerHeight - 50) + "px";
+
+        goldenCoin.onclick = () => {
+          goldenCoin.remove();
+          triggerGoldenReward();
+        };
+
+        document.body.appendChild(goldenCoin);
+
+        // Auto-remove after 10s if not clicked
+        setTimeout(() => {
+          if (goldenCoin.parentElement) goldenCoin.remove();
+        }, 10000);
+      }
+    }
+
+    // Golden coin rewards
+    function triggerGoldenReward() {
+      const rewardType = Math.floor(Math.random() * 3);
+
+      if (rewardType === 0) {
+        productionMultiplier = 7;
+        setTimeout(() => productionMultiplier = 1, 30000);
+        alert("Golden Bonus! Production x7 for 30s!");
+      } else if (rewardType === 1) {
+        let bonus = coins * (Math.random() * 0.15 + 0.10); // 10–25%
+        coins += Math.floor(bonus);
+        alert("Golden Bonus! +" + Math.floor(bonus) + " coins!");
+      } else if (rewardType === 2) {
+        clickMultiplier = 1111;
+        setTimeout(() => clickMultiplier = 1, 30000);
+        alert("Golden Bonus! Click Power x1111 for 30s!");
+      }
+    }
+
+    // Coin click
+    document.getElementById("coin").addEventListener("click", () => {
+      coins += coinsPerClick * clickMultiplier;
+      updateDisplay();
+    });
+
+    // Generate store
+    function generateStore() {
+      store.innerHTML = "";
+      upgrades.forEach((u, i) => {
+        let div = document.createElement("div");
+        div.className = "upgrade";
+        div.innerHTML = `
+          <strong>${u.name} (+${u.amount} ${u.type.toUpperCase()})</strong><br>
+          Cost: ${u.cost} coins<br>
+          Owned: ${u.owned}<br>
+          <button onclick="buyUpgrade(${i})">Buy</button>
+          <div class="subupgrade">
+            🔧 ${u.name} Efficiency (+50% per building)<br>
+            Cost: ${u.subCost} coins | Owned: ${u.subOwned}/10<br>
+            <button onclick="buySubUpgrade(${i})">Buy</button>
+          </div>
+        `;
+        store.appendChild(div);
+      });
+    }
+
+    function buyUpgrade(i) {
+      let u = upgrades[i];
+      if (coins >= u.cost) {
+        coins -= u.cost;
+        u.owned++;
+        if (u.type === "cps") {
+          coinsPerSecond += u.amount;
+        } else {
+          coinsPerClick += u.amount;
+        }
+        u.cost = Math.floor(u.cost * 1.15);
+        updateDisplay();
+        generateStore();
+      }
+    }
+
+    function buySubUpgrade(i) {
+      let u = upgrades[i];
+      if (coins >= u.subCost && u.subOwned < 10) {
+        coins -= u.subCost;
+        u.subOwned++;
+        if (u.type === "cps") {
+          coinsPerSecond += u.amount * 0.5 * u.owned;
+        } else {
+          coinsPerClick += u.amount * 0.5 * u.owned;
+        }
+        u.subCost = Math.floor(u.subCost * 2);
+        updateDisplay();
+        generateStore();
+      }
+    }
+
+    // Update coin display
+    function updateDisplay() {
+      coinDisplay.textContent = coins;
+      cpsDisplay.textContent = Math.round(coinsPerSecond * productionMultiplier);
+      cpcDisplay.textContent = Math.round(coinsPerClick * clickMultiplier);
+    }
+
+    // Game loop
+    setInterval(() => {
+      coins += coinsPerSecond * productionMultiplier;
+      updateDisplay();
+    }, 1000);
+
+    // Golden coin interval
+    setInterval(spawnGoldenCoin, 15000);
+
+    generateStore();
+    updateDisplay();
+  </script>
+</body>
+</html>
