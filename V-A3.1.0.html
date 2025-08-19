@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Incremental Game</title>
+<style>
+    body {
+        font-family: "Trebuchet MS", sans-serif;
+        background: linear-gradient(180deg, #d3cce3, #e9e4f0);
+        margin: 0;
+        padding: 0;
+        color: #222;
+    }
+    h1 {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 2.2em;
+    }
+    #game {
+        display: flex;
+        justify-content: space-between;
+        padding: 20px;
+    }
+    #stats {
+        flex: 1;
+        margin: 20px;
+        padding: 20px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    #shop, #boosts {
+        flex: 1;
+        margin: 20px;
+        padding: 20px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    button {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        background: #4caf50;
+        color: white;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    button:hover:not(:disabled) {
+        background: #45a049;
+    }
+    button:disabled {
+        background: #aaa;
+        cursor: not-allowed;
+    }
+</style>
+</head>
+<body>
+
+<h1>Incremental Clicker</h1>
+<div id="game">
+    <div id="stats">
+        <h2>Stats</h2>
+        <p>Coins: <span id="coins">0</span></p>
+        <p>Coins per second: <span id="cps">0</span></p>
+        <p>Total Upgrades Owned: <span id="totalUpgrades">0</span></p>
+        <button onclick="clickCoin()">Click for Coins (+1)</button>
+    </div>
+
+    <div id="shop">
+        <h2>Upgrades</h2>
+        <div id="upgrades"></div>
+    </div>
+
+    <div id="boosts">
+        <h2>Boosts</h2>
+        <div id="boostList"></div>
+    </div>
+</div>
+
+<script>
+    let coins = 0;
+    let coinsPerClick = 1;
+    let coinsPerSecond = 0;
+    let totalUpgradesOwned = 0;
+
+    // Upgrades
+    let upgrades = [
+        { name: "Cursor", baseCost: 10, cost: 10, cps: 1, owned: 0, multiplier: 1 },
+        { name: "Farm", baseCost: 50, cost: 50, cps: 5, owned: 0, multiplier: 1 },
+        { name: "Mine", baseCost: 200, cost: 200, cps: 20, owned: 0, multiplier: 1 }
+    ];
+
+    // Boosts (start locked, unlock once player owns the matching upgrade)
+    let boosts = upgrades.map(u => ({
+        name: `Boost ${u.name}`,
+        target: u.name,
+        baseCost: u.baseCost * 3,
+        cost: u.baseCost * 3,
+        owned: 0
+    }));
+
+    function clickCoin() {
+        coins += coinsPerClick;
+        updateDisplay();
+    }
+
+    function buyUpgrade(index) {
+        let u = upgrades[index];
+        if (coins >= u.cost) {
+            coins -= u.cost;
+            u.owned++;
+            totalUpgradesOwned++;
+            u.cost = Math.floor(u.cost * 1.5);
+            updateDisplay();
+        }
+    }
+
+    function buyBoost(index) {
+        let b = boosts[index];
+        let targetUpgrade = upgrades.find(u => u.name === b.target);
+        if (coins >= b.cost && targetUpgrade.owned > 0) {
+            coins -= b.cost;
+            b.owned++;
+            targetUpgrade.multiplier *= 1.5; // each boost = +50%
+            b.cost = Math.floor(b.cost * 2);
+            updateDisplay();
+        }
+    }
+
+    function getCPS() {
+        let cps = 0;
+        for (let u of upgrades) {
+            cps += u.owned * u.cps * u.multiplier;
+        }
+        return cps;
+    }
+
+    function updateDisplay() {
+        coinsPerSecond = getCPS();
+        document.getElementById("coins").textContent = coins;
+        document.getElementById("cps").textContent = coinsPerSecond;
+        document.getElementById("totalUpgrades").textContent = totalUpgradesOwned;
+
+        // Upgrade buttons
+        document.getElementById("upgrades").innerHTML = "";
+        upgrades.forEach((u, i) => {
+            let btn = document.createElement("button");
+            btn.textContent = `${u.name} (+${u.cps} CPS) – Cost: ${u.cost} – Owned: ${u.owned}`;
+            btn.disabled = coins < u.cost;
+            btn.onclick = () => buyUpgrade(i);
+            document.getElementById("upgrades").appendChild(btn);
+        });
+
+        // Boost buttons
+        document.getElementById("boostList").innerHTML = "";
+        boosts.forEach((b, i) => {
+            let targetUpgrade = upgrades.find(u => u.name === b.target);
+            if (targetUpgrade.owned > 0) { // unlock only if main upgrade is owned
+                let btn = document.createElement("button");
+                btn.textContent = `${b.name} (1.5x ${b.target}) – Cost: ${b.cost} – Bought: ${b.owned}`;
+                btn.disabled = coins < b.cost;
+                btn.onclick = () => buyBoost(i);
+                document.getElementById("boostList").appendChild(btn);
+            }
+        });
+    }
+
+    // Passive income loop
+    setInterval(() => {
+        coins += coinsPerSecond;
+        updateDisplay();
+    }, 1000);
+
+    updateDisplay();
+</script>
+
+</body>
+</html>
